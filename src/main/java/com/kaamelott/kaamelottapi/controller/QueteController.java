@@ -1,6 +1,7 @@
 package com.kaamelott.kaamelottapi.controller;
 
 import com.kaamelott.kaamelottapi.dto.ParticipationQueteRequestDto;
+import com.kaamelott.kaamelottapi.dto.QuetePeriodeResponseDto;
 import com.kaamelott.kaamelottapi.entities.Chevalier;
 import com.kaamelott.kaamelottapi.entities.ParticipationQuete;
 import com.kaamelott.kaamelottapi.entities.Quete;
@@ -9,6 +10,7 @@ import com.kaamelott.kaamelottapi.exceptions.ResourceNotFoundException;
 import com.kaamelott.kaamelottapi.repositories.ChevalierRepository;
 import com.kaamelott.kaamelottapi.repositories.ParticipationQueteRepository;
 import com.kaamelott.kaamelottapi.repositories.QueteRepository;
+import com.kaamelott.kaamelottapi.services.QueteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("api/quetes")
@@ -34,6 +37,9 @@ public class QueteController {
 
     @Autowired
     private QueteRepository queteRepository;
+
+    @Autowired
+    private QueteService queteService;
 
     // anotation swagger pour la documentation de l'API
     @Operation(
@@ -145,5 +151,39 @@ public class QueteController {
         return ResponseEntity.ok(quetes);
     }
 
+    @Operation(summary = "Récupère les quêtes dans une période donnée", description = "Retourne les quêtes dont la période d'activité se chevauche avec la période spécifiée, avec leur nom, nombre de chevaliers, statut, durée et difficulté.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des quêtes retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucune quête trouvée")
+    })
+    @GetMapping("/periode")
+    public ResponseEntity<List<QuetePeriodeResponseDto>> getQuetesByPeriode(
+            @RequestParam("date_debut") String dateDebut,
+            @RequestParam("date_fin") String dateFin) {
+        LocalDate startDate = LocalDate.parse(dateDebut);
+        LocalDate endDate = LocalDate.parse(dateFin);
+
+        List<QuetePeriodeResponseDto> quetes = queteRepository.findAll().stream()
+                .filter(quete -> quete.getDateAssignation() != null && quete.getDateEcheance() != null &&
+                        !quete.getDateAssignation().isAfter(endDate) && !quete.getDateEcheance().isBefore(startDate))
+                .map(quete -> {
+                    long nombreChevaliers = participationQueteRepository.countByQueteId(quete.getId());
+                    String statut = queteService.determineStatut(quete);
+                    long duree = ChronoUnit.DAYS.between(quete.getDateAssignation(), quete.getDateEcheance());
+                    return new QuetePeriodeResponseDto(
+                            quete.getNomQuete(),
+                            nombreChevaliers,
+                            statut,
+                            duree,
+                            quete.getDifficulte().toString()
+                    );
+                })
+                .collect(Collectors.toList());
+
+        if (quetes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(quetes);
+    }
 
 }

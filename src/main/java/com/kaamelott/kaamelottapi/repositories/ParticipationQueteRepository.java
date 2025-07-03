@@ -8,7 +8,12 @@ import java.util.List;
 
 public interface ParticipationQueteRepository extends JpaRepository<ParticipationQuete, ParticipationQueteId> {
     List<ParticipationQuete> findByQueteId(Integer queteId);
+
     List<ParticipationQuete> findByChevalierIdAndStatutParticipation(Integer chevalierId, ParticipationQuete.StatutParticipation statut);
+
     boolean existsByChevalierIdAndQueteId(Integer chevalierId, Integer queteId);
+
     long countByQueteId(Integer queteId);
+
+    List<ParticipationQuete> findByChevalierId(Integer chevalierId);
 }

@@ -1,5 +1,6 @@
 package com.kaamelott.kaamelottapi.controller;
 
+import com.kaamelott.kaamelottapi.dto.RapportPerformanceDto;
 import com.kaamelott.kaamelottapi.entities.Chevalier;
 import com.kaamelott.kaamelottapi.entities.ParticipationQuete;
 import com.kaamelott.kaamelottapi.entities.ParticipationQueteId;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -126,5 +128,49 @@ public class ChevalierController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(chevaliers);
+    }
+
+    @GetMapping("/rapport-performance/{idChevalier}")
+    public ResponseEntity<RapportPerformanceDto> getRapportPerformance(@PathVariable Integer idChevalier) {
+        // check l'existence du chevalier
+        chevalierRepository.findById(idChevalier)
+                .orElseThrow(() -> new ResourceNotFoundException("Chevalier non trouvé avec l'ID : " + idChevalier));
+
+        // recu les participations du chevalier
+        List<ParticipationQuete> participations = participationQueteRepository.findByChevalierId(idChevalier);
+
+        // calcuils
+        long quetesTerminees = participations.stream()
+                .filter(p -> p.getStatutParticipation() == ParticipationQuete.StatutParticipation.TERMINEE)
+                .count();
+        long quetesChefExpedition = participations.stream()
+                .filter(p -> p.getRole() == ParticipationQuete.Role.CHEF_EXPEDITION)
+                .count();
+        long quetesEnCoursOuTerminees = participations.stream()
+                .filter(p -> p.getStatutParticipation() == ParticipationQuete.StatutParticipation.EN_COURS ||
+                        p.getStatutParticipation() == ParticipationQuete.StatutParticipation.TERMINEE)
+                .count();
+        double tauxSucces = quetesEnCoursOuTerminees > 0 ? (double) quetesTerminees / quetesEnCoursOuTerminees * 100 : 0.0;
+
+        // commentaire du roi le plus fréquent
+        String commentaireFrequent = participations.stream()
+                .filter(p -> p.getCommentaireRoi() != null && !p.getCommentaireRoi().isEmpty())
+                .collect(Collectors.groupingBy(
+                        ParticipationQuete::getCommentaireRoi,
+                        Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("Aucun commentaire");
+
+        // DTO
+        RapportPerformanceDto rapport = new RapportPerformanceDto(
+                quetesTerminees,
+                quetesChefExpedition,
+                tauxSucces,
+                commentaireFrequent
+        );
+
+        return ResponseEntity.ok(rapport);
     }
 }
