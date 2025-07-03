@@ -17,6 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 
 @RestController
@@ -91,4 +94,56 @@ public class QueteController {
             throw new BadRequestException("Erreur : " + e.getMessage());
         }
     }
+
+    @Operation(summary = "Récupère les quêtes aberrantes non terminées", description = "Retourne les quêtes avec difficulté ABERANTE qui n'ont pas encore commencé ou sont en cours.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des quêtes aberrantes retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucune quête aberrante trouvée")
+    })
+    @GetMapping("/difficulte-aberrante")
+    public ResponseEntity<List<Quete>> getQuetesAberrantes() {
+        List<Quete> quetes = queteRepository.findByDifficulteAndDateAssignationAfterOrDateAssignation(
+                Quete.Difficulte.ABERANTE, LocalDate.now());
+        if (quetes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(quetes);
+    }
+
+    @Operation(summary = "Récupère les quêtes avec effectif manquant", description = "Retourne les quêtes ayant moins de chevaliers assignés que le minimum spécifié.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des quêtes avec effectif manquant retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucune quête avec effectif manquant trouvée")
+    })
+    @GetMapping("/effectif-manquant")
+    public ResponseEntity<List<Quete>> getQuetesEffectifManquant(@RequestParam("min") Integer min) {
+        List<Quete> quetes = queteRepository.findAll().stream()
+                .filter(quete -> participationQueteRepository.countByQueteId(quete.getId()) < min)
+                .toList();
+        if (quetes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(quetes);
+    }
+
+    @Operation(summary = "Récupère les quêtes les plus longues", description = "Retourne les X quêtes les plus longues basées sur la durée entre date_assignation et date_echeance, triées par ordre décroissant.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des quêtes les plus longues retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucune quête trouvée")
+    })
+    @GetMapping("/les-plus-longues")
+    public ResponseEntity<List<Quete>> getQuetesLesPlusLongues(@RequestParam("limit") Integer limit) {
+        List<Quete> quetes = queteRepository.findAll().stream()
+                .filter(quete -> quete.getDateAssignation() != null && quete.getDateEcheance() != null)
+                .sorted(Comparator.comparingLong((Quete quete) ->
+                        ChronoUnit.DAYS.between(quete.getDateAssignation(), quete.getDateEcheance())).reversed())
+                .limit(limit)
+                .toList();
+        if (quetes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(quetes);
+    }
+
+
 }

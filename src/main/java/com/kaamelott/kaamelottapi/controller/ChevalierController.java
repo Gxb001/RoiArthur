@@ -1,7 +1,13 @@
 package com.kaamelott.kaamelottapi.controller;
 
 import com.kaamelott.kaamelottapi.entities.Chevalier;
+import com.kaamelott.kaamelottapi.entities.ParticipationQuete;
+import com.kaamelott.kaamelottapi.entities.ParticipationQueteId;
+import com.kaamelott.kaamelottapi.entities.Quete;
+import com.kaamelott.kaamelottapi.exceptions.ResourceNotFoundException;
 import com.kaamelott.kaamelottapi.repositories.ChevalierRepository;
+import com.kaamelott.kaamelottapi.repositories.ParticipationQueteRepository;
+import com.kaamelott.kaamelottapi.repositories.QueteRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -11,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/chevaliers")
@@ -18,6 +25,12 @@ public class ChevalierController {
 
     @Autowired
     private ChevalierRepository chevalierRepository;
+
+    @Autowired
+    private ParticipationQueteRepository participationQueteRepository;
+
+    @Autowired
+    private QueteRepository queteRepository;
 
     @Operation(summary = "Récupérer tous les chevaliers", description = "Retourne la liste de tous les chevaliers. Retourne 204 si la liste est vide.")
     @ApiResponses(value = {
@@ -45,5 +58,73 @@ public class ChevalierController {
         }
         Chevalier savedChevalier = chevalierRepository.save(chevalier);
         return ResponseEntity.ok(savedChevalier);
+    }
+
+    @Operation(summary = "Récupère les quêtes en cours d'un chevalier", description = "Retourne la liste des quêtes avec statut EN_COURS pour un chevalier spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des quêtes en cours retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucune quête en cours trouvée"),
+            @ApiResponse(responseCode = "404", description = "Chevalier non trouvé")
+    })
+    @GetMapping("/{idChevalier}/quetes-en-cours")
+    public ResponseEntity<List<Quete>> getQuetesEnCours(@PathVariable Integer idChevalier) {
+        // check l'existence du chevalier
+        chevalierRepository.findById(idChevalier)
+                .orElseThrow(() -> new ResourceNotFoundException("Chevalier non trouvé avec l'ID : " + idChevalier));
+
+        List<ParticipationQuete> participations = participationQueteRepository
+                .findByChevalierIdAndStatutParticipation(idChevalier, ParticipationQuete.StatutParticipation.EN_COURS);
+
+        List<Quete> quetes = participations.stream()
+                .map(ParticipationQuete::getQuete)
+                .collect(Collectors.toList());
+
+        if (quetes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(quetes);
+    }
+
+    @Operation(summary = "Retire un chevalier d'une quête", description = "Supprime la participation d'un chevalier à une quête spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Participation supprimée avec succès"),
+            @ApiResponse(responseCode = "404", description = "Chevalier, quête ou participation non trouvée")
+    })
+    @DeleteMapping("/{idChevalier}/retirer-quete/{idQuete}")
+    public ResponseEntity<Void> retirerChevalierDeQuete(@PathVariable Integer idChevalier, @PathVariable Integer idQuete) {
+        // check l'existence du chevalier
+        chevalierRepository.findById(idChevalier)
+                .orElseThrow(() -> new ResourceNotFoundException("Chevalier non trouvé avec l'ID : " + idChevalier));
+
+        // check l'existence de la quête
+        queteRepository.findById(idQuete)
+                .orElseThrow(() -> new ResourceNotFoundException("Quête non trouvée avec l'ID : " + idQuete));
+
+        // check l'existence de la participation
+        ParticipationQueteId participationId = new ParticipationQueteId();
+        participationId.setChevalier(idChevalier);
+        participationId.setQuete(idQuete);
+
+        if (!participationQueteRepository.existsById(participationId)) {
+            throw new ResourceNotFoundException("Participation non trouvée pour le chevalier " + idChevalier + " et la quête " + idQuete);
+        }
+
+        // delete la participation
+        participationQueteRepository.deleteById(participationId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Recherche les chevaliers par caractéristique principale", description = "Retourne la liste des chevaliers ayant la caractéristique principale spécifiée.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des chevaliers retournée"),
+            @ApiResponse(responseCode = "204", description = "Aucun chevalier trouvé pour cette caractéristique")
+    })
+    @GetMapping("/caracteristique/{caracteristique}")
+    public ResponseEntity<List<Chevalier>> getChevaliersByCaracteristique(@PathVariable String caracteristique) {
+        List<Chevalier> chevaliers = chevalierRepository.findByCaracteristiquePrincipale(caracteristique);
+        if (chevaliers.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(chevaliers);
     }
 }
