@@ -2,6 +2,7 @@ package com.kaamelott.kaamelottapi.controller;
 
 import com.kaamelott.kaamelottapi.dto.RapportActiviteMensuelDto;
 import com.kaamelott.kaamelottapi.entities.ParticipationQuete;
+import com.kaamelott.kaamelottapi.entities.Quete;
 import com.kaamelott.kaamelottapi.repositories.ParticipationQueteRepository;
 import com.kaamelott.kaamelottapi.repositories.QueteRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,7 +29,7 @@ public class StatsController {
     @Autowired
     private ParticipationQueteRepository participationQueteRepository;
 
-    @Operation(summary = "Rapport d'activité mensuel", description = "Retourne le nombre de quêtes initiées, terminées et de chevaliers actifs pour un mois et une année donnés.")
+    @Operation(summary = "Rapport d'activité mensuel", description = "Retourne le nombre de quêtes initiées, terminées, de chevaliers actifs et la quête la plus lamentablement échouée pour un mois et une année donnés.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rapport mensuel retourné"),
             @ApiResponse(responseCode = "204", description = "Aucune activité trouvée pour la période")
@@ -40,14 +42,14 @@ public class StatsController {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        // Initié
+        // initiées
         long quetesInitiees = queteRepository.findAll().stream()
                 .filter(quete -> quete.getDateAssignation() != null &&
                         !quete.getDateAssignation().isBefore(startDate) &&
                         !quete.getDateAssignation().isAfter(endDate))
                 .count();
 
-        // Terminée
+        // Quêtes terminées (participations TERMINEE dans le mois)
         long quetesTerminees = participationQueteRepository.findAll().stream()
                 .filter(p -> p.getStatutParticipation() == ParticipationQuete.StatutParticipation.TERMINEE &&
                         p.getQuete().getDateAssignation() != null &&
@@ -57,7 +59,7 @@ public class StatsController {
                 .distinct()
                 .count();
 
-        // chevaliers actifs
+        // actifs (participations dans le mois)
         long chevaliersActifs = participationQueteRepository.findAll().stream()
                 .filter(p -> p.getQuete().getDateAssignation() != null &&
                         !p.getQuete().getDateAssignation().isBefore(startDate) &&
@@ -66,13 +68,38 @@ public class StatsController {
                 .collect(Collectors.toSet())
                 .size();
 
+        //échouée
+        Quete queteEchouee;
+        List<String> chevaliersEchouee = null;
+        List<ParticipationQuete> participationsEchouees = participationQueteRepository.findAll().stream()
+                .filter(p -> p.getStatutParticipation() == ParticipationQuete.StatutParticipation.ECHOUEE_LAMENTABLEMENT &&
+                        p.getQuete().getDateAssignation() != null &&
+                        !p.getQuete().getDateAssignation().isBefore(startDate) &&
+                        !p.getQuete().getDateAssignation().isAfter(endDate))
+                .toList();
+
+        if (!participationsEchouees.isEmpty()) {
+            queteEchouee = participationsEchouees.get(0).getQuete();
+            chevaliersEchouee = participationsEchouees.stream()
+                    .filter(p -> p.getQuete().getId().equals(queteEchouee.getId()))
+                    .map(p -> p.getChevalier().getNom())
+                    .collect(Collectors.toList());
+        } else {
+            queteEchouee = null;
+        }
+
+        String nomQueteEchouee = queteEchouee != null ? queteEchouee.getNomQuete() : "Aucune";
+        String chevaliersEchoueeStr = chevaliersEchouee != null ? String.join(", ", chevaliersEchouee) : "Aucun";
+
         RapportActiviteMensuelDto rapport = new RapportActiviteMensuelDto(
                 quetesInitiees,
                 quetesTerminees,
-                chevaliersActifs
+                chevaliersActifs,
+                nomQueteEchouee,
+                chevaliersEchoueeStr
         );
 
-        if (quetesInitiees == 0 && quetesTerminees == 0 && chevaliersActifs == 0) {
+        if (quetesInitiees == 0 && quetesTerminees == 0 && chevaliersActifs == 0 && queteEchouee == null) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(rapport);

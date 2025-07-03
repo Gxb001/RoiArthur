@@ -1,0 +1,129 @@
+### 1. GET /chevaliers
+# Récupère tous les chevaliers
+GET http://localhost:8080/api/chevaliers
+
+### 2. POST /chevaliers
+# Crée un nouveau chevalier
+POST http://localhost:8080/api/chevaliers
+Content-Type: application/json
+
+{
+  "nom": "Galahad",
+  "titre": "Chevalier",
+  "caracteristiquePrincipale": "Idéaliste",
+  "niveauBravoure": 6
+}
+
+### 3. POST /chevaliers (cas invalide : niveau_bravoure hors limites)
+POST http://localhost:8080/api/chevaliers
+Content-Type: application/json
+
+{
+  "nom": "Invalidus",
+  "titre": "Chevalier",
+  "caracteristiquePrincipale": "Téméraire",
+  "niveauBravoure": 11
+}
+
+### 4. GET /quetes/1/participants
+# Récupère les participants de la quête 1 (Quête du Graal)
+GET http://localhost:8080/api/quetes/1/participants
+
+### 5. GET /quetes/9/participants
+# Récupère les participants de la nouvelle quête 9 (Cartographier les terres)
+GET http://localhost:8080/api/quetes/9/participants
+
+### 6. POST /quetes/1/assigner-chevalier
+# Assigne un nouveau chevalier à la quête 1
+POST http://localhost:8080/api/quetes/1/assigner-chevalier
+Content-Type: application/json
+
+{
+  "idChevalier": 11,
+  "role": "ACCOLYTE",
+  "statutParticipation": "EN_COURS",
+  "commentaireRoi": "Merlin, essaye de ne pas te perdre."
+}
+
+### 7. POST /quetes/1/assigner-chevalier (cas invalide : chevalier déjà assigné)
+POST http://localhost:8080/api/quetes/1/assigner-chevalier
+Content-Type: application/json
+
+{
+  "idChevalier": 1,
+  "role": "RESERVE",
+  "statutParticipation": "EN_COURS",
+  "commentaireRoi": "Perceval, encore toi ?"
+}
+
+### 8. GET /chevaliers/6/quetes-en-cours
+# Récupère les quêtes en cours du chevalier 6 (Lancelot)
+GET http://localhost:8080/api/chevaliers/6/quetes-en-cours
+
+### 9. GET /chevaliers/5/quetes-en-cours
+# Récupère les quêtes en cours du chevalier 5 (Bohort)
+GET http://localhost:8080/api/chevaliers/5/quetes-en-cours
+
+### 10. GET /quetes/difficulte-aberrante
+# Récupère les quêtes de difficulté ABERANTE non terminées
+GET http://localhost:8080/api/quetes/difficulte-aberrante
+
+### 11. DELETE /chevaliers/3/retirer-quete/8
+# Retire le chevalier 3 (Léodagan) de la quête 8 (Négocier avec les Pictes)
+DELETE http://localhost:8080/api/chevaliers/3/retirer-quete/8
+
+### 12. DELETE /chevaliers/99/retirer-quete/8
+# Cas invalide : chevalier inexistant
+DELETE http://localhost:8080/api/chevaliers/99/retirer-quete/8
+
+### 13. GET /chevaliers/caracteristique/Gourmand
+# Récupère les chevaliers avec caractéristique principale "Gourmand"
+GET http://localhost:8080/api/chevaliers/caracteristique/Gourmand
+
+### 14. GET /chevaliers/caracteristique/Distrait
+# Récupère les chevaliers avec caractéristique principale "Distrait"
+GET http://localhost:8080/api/chevaliers/caracteristique/Distrait
+
+### 15. GET /quetes/effectif-manquant?min=3
+# Récupère les quêtes avec moins de 3 chevaliers assignés
+GET http://localhost:8080/api/quetes/effectif-manquant?min=3
+
+### 16. GET /quetes/effectif-manquant?min=5
+# Récupère les quêtes avec moins de 5 chevaliers assignés
+GET http://localhost:8080/api/quetes/effectif-manquant?min=5
+
+### 17. GET /quetes/les-plus-longues?limit=3
+# Récupère les 3 quêtes les plus longues
+GET http://localhost:8080/api/quetes/les-plus-longues?limit=3
+
+### 18. GET /quetes/les-plus-longues?limit=10
+# Récupère jusqu'à 10 quêtes les plus longues
+GET http://localhost:8080/api/quetes/les-plus-longues?limit=10
+
+### 19. GET /quetes/periode?date_debut=2025-01-01&date_fin=2025-12-31
+# Récupère les quêtes actives en 2025
+GET http://localhost:8080/api/quetes/periode?date_debut=2025-01-01&date_fin=2025-12-31
+
+### 20. GET /quetes/periode?date_debut=2025-07-01&date_fin=2025-07-31
+# Récupère les quêtes actives en juillet 2025
+GET http://localhost:8080/api/quetes/periode?date_debut=2025-07-01&date_fin=2025-07-31
+
+### 21. GET /chevaliers/rapport-performance/4
+# Rapport de performance du chevalier 4 (Arthur)
+GET http://localhost:8080/api/chevaliers/rapport-performance/4
+
+### 22. GET /chevaliers/rapport-performance/11
+# Rapport de performance du chevalier 11 (Merlin)
+GET http://localhost:8080/api/chevaliers/rapport-performance/11
+
+### 23. GET /stats/rapport-activite-mensuel?mois=7&annee=2025
+# Rapport d'activité pour juillet 2025 (quêtes 7, 8, 12)
+GET http://localhost:8080/api/stats/rapport-activite-mensuel?mois=7&annee=2025
+
+### 24. GET /stats/rapport-activite-mensuel?mois=10&annee=2025
+# Rapport d'activité pour octobre 2025 (quête 11)
+GET http://localhost:8080/api/stats/rapport-activite-mensuel?mois=10&annee=2025
+
+### 25. GET /stats/rapport-activite-mensuel?mois=4&annee=2025
+# Rapport d'activité pour avril 2025 (quête 4, avec échec lamentable de Bohort)
+GET http://localhost:8080/api/stats/rapport-activite-mensuel?mois=4&annee=2025
