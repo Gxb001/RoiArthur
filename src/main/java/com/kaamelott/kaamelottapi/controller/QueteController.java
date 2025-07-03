@@ -109,7 +109,7 @@ public class QueteController {
     @GetMapping("/difficulte-aberrante")
     public ResponseEntity<List<Quete>> getQuetesAberrantes() {
         List<Quete> quetes = queteRepository.findByDifficulteAndDateAssignationAfterOrDateAssignation(
-                Quete.Difficulte.ABERANTE, LocalDate.now());
+                Quete.Difficulte.ABERANTE, LocalDate.now()); // Récupère les quêtes avec difficulté ABERANTE qui n'ont pas encore commencé ou sont en cours
         if (quetes.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -125,7 +125,7 @@ public class QueteController {
     public ResponseEntity<List<Quete>> getQuetesEffectifManquant(@RequestParam("min") Integer min) {
         List<Quete> quetes = queteRepository.findAll().stream()
                 .filter(quete -> participationQueteRepository.countByQueteId(quete.getId()) < min)
-                .toList();
+                .toList(); // Filtre les quêtes ayant moins de chevaliers assignés que le minimum spécifié
         if (quetes.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -144,7 +144,7 @@ public class QueteController {
                 .sorted(Comparator.comparingLong((Quete quete) ->
                         ChronoUnit.DAYS.between(quete.getDateAssignation(), quete.getDateEcheance())).reversed())
                 .limit(limit)
-                .toList();
+                .toList(); // Filtre les quêtes ayant des dates d'assignation et d'échéance valides, puis trie par durée décroissante
         if (quetes.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -158,16 +158,16 @@ public class QueteController {
     })
     @GetMapping("/periode")
     public ResponseEntity<List<QuetePeriodeResponseDto>> getQuetesByPeriode(
-            @RequestParam("date_debut") String dateDebut,
+            @RequestParam("date_debut") String dateDebut, // Format attendu : "YYYY-MM-DD"
             @RequestParam("date_fin") String dateFin) {
         LocalDate startDate = LocalDate.parse(dateDebut);
         LocalDate endDate = LocalDate.parse(dateFin);
 
         List<QuetePeriodeResponseDto> quetes = queteRepository.findAll().stream()
                 .filter(quete -> quete.getDateAssignation() != null && quete.getDateEcheance() != null &&
-                        !quete.getDateAssignation().isAfter(endDate) && !quete.getDateEcheance().isBefore(startDate))
+                        !quete.getDateAssignation().isAfter(endDate) && !quete.getDateEcheance().isBefore(startDate)) // Filtre les quetes dont la période d'activité se chevauche avec la période spécifiée
                 .map(quete -> {
-                    long nombreChevaliers = participationQueteRepository.countByQueteId(quete.getId());
+                    long nombreChevaliers = participationQueteRepository.countByQueteId(quete.getId()); // Compte le nombre de chevaliers assignés à la quête
                     String statut = queteService.determineStatut(quete);
                     long duree = ChronoUnit.DAYS.between(quete.getDateAssignation(), quete.getDateEcheance());
                     return new QuetePeriodeResponseDto(

@@ -17,4 +17,8 @@ public class ParticipationQueteRequestDto {
     private String statutParticipation;
 
     private String commentaireRoi;
+
+    public ParticipationQueteRequestDto() {
+        // Constructeur par défaut requis pour la désérialisation JSON
+    }
 }

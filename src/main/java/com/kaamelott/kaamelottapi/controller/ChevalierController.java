@@ -42,7 +42,7 @@ public class ChevalierController {
     @GetMapping
     public ResponseEntity<List<Chevalier>> getAllChevaliers() {
         List<Chevalier> chevaliers = chevalierRepository.findAll();
-        if (chevaliers.isEmpty()) {
+        if (chevaliers.isEmpty()) { // Vérifie si la liste est vide
             return ResponseEntity.noContent().build(); // 204 si la liste est vide
         }
         return ResponseEntity.ok(chevaliers); // 200 avec la liste
@@ -58,6 +58,7 @@ public class ChevalierController {
         if (chevalier.getId() != null && chevalierRepository.existsById(chevalier.getId())) {
             return ResponseEntity.badRequest().body("Un chevalier avec cet ID existe déjà.");
         }
+        // Vérifie que la caractéristique principale est valide
         Chevalier savedChevalier = chevalierRepository.save(chevalier);
         return ResponseEntity.ok(savedChevalier);
     }
@@ -74,9 +75,11 @@ public class ChevalierController {
         chevalierRepository.findById(idChevalier)
                 .orElseThrow(() -> new ResourceNotFoundException("Chevalier non trouvé avec l'ID : " + idChevalier));
 
+        // récupère les participations en cours du chevalier
         List<ParticipationQuete> participations = participationQueteRepository
                 .findByChevalierIdAndStatutParticipation(idChevalier, ParticipationQuete.StatutParticipation.EN_COURS);
 
+        // map les participations pour obtenir la liste des quêtes
         List<Quete> quetes = participations.stream()
                 .map(ParticipationQuete::getQuete)
                 .collect(Collectors.toList());
@@ -123,7 +126,7 @@ public class ChevalierController {
     })
     @GetMapping("/caracteristique/{caracteristique}")
     public ResponseEntity<List<Chevalier>> getChevaliersByCaracteristique(@PathVariable String caracteristique) {
-        List<Chevalier> chevaliers = chevalierRepository.findByCaracteristiquePrincipale(caracteristique);
+        List<Chevalier> chevaliers = chevalierRepository.findByCaracteristiquePrincipale(caracteristique); // Utilise la méthode du repository pour trouver par caractéristique
         if (chevaliers.isEmpty()) {
             return ResponseEntity.noContent().build();
         }

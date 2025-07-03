@@ -13,7 +13,7 @@ public class QueteService {
     @Autowired
     private ParticipationQueteRepository participationQueteRepository;
 
-    public String determineStatut(Quete quete) {
+    public String determineStatut(Quete quete) { // Détermine le statut de la quête en fonction des dates et des participations
         LocalDate today = LocalDate.now();
         if (today.isBefore(quete.getDateAssignation())) {
             return "À Venir";
